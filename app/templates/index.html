@@ -388,13 +388,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔥 화재 감지 실시간 지도 시스템</h1>
+        <h1>화재 감지 실시간 지도 시스템</h1>
         
         <div class="video-section">
             <h2>📹 비디오 모니터링</h2>
             
-            <div class="video-container">
-                <video id="videoElement" autoplay muted style="display: none;"></video>
+            <div class="video-container" id="video-container">
+                <video id="videoElement" controls autoplay muted style="display: none;"></video>
                 <div id="videoPlaceholder" class="video-placeholder">
                     비디오 소스를 선택해주세요
                 </div>
@@ -449,7 +449,10 @@
                 this.detectionInterval = null;
                 this.canvas = null;
                 this.isDetecting = false;
-                this.apiEndpoint = 'http://localhost:8000/detection';
+                this.apiEndpoint = '/detection';
+
+                this.scaleX = null;
+                this.scaleY = null;
                 
                 this.initMap();
                 this.initEventListeners();
@@ -488,6 +491,24 @@
                 this.canvas = document.createElement('canvas');
                 this.canvas.width = 640;
                 this.canvas.height = 480;
+
+                this.drawCanvas = document.createElement('canvas');
+                this.drawCanvas.width = 640;
+                this.drawCanvas.height = 480;
+                this.drawCanvas.style = "position:absolute; top:0; left:0; pointer-events:none;";
+
+                
+                const container = document.getElementById("video-container")
+                container.appendChild(this.drawCanvas);
+
+                let videoElement = document.getElementById("videoElement");
+                if(videoElement.offsetWidth == 0) {
+                    videoElement = document.getElementById("videoPlaceholder")
+                }
+                this.scaleX = videoElement.offsetWidth / 640;
+                this.scaleY = videoElement.offsetHeight / 480;
+                console.log(this.scaleX, this.scaleY)
+
             }
 
             initEventListeners() {
@@ -567,7 +588,7 @@
                     // 3초마다 프레임 캡처 및 감지 요청
                     this.detectionInterval = setInterval(() => {
                         this.captureAndDetect();
-                    }, 3000);
+                    }, 1000);
                     
                     this.logMessage('화재 감지가 시작되었습니다', 'success');
                 }
@@ -577,10 +598,12 @@
                 if (this.isDetecting) {
                     this.isDetecting = false;
                     clearInterval(this.detectionInterval);
+
+
                     this.updateDetectionStatus('중지됨', 'normal');
                     this.updateFireStatus('정상', 'normal');
                     this.toggleDetectionButtons(true, false);
-                    this.resetMonitoringArea();
+                    // this.resetMonitoringArea(); // stopDetection을 한다고 해서 화재가 중지되지 않게한다. 
                     this.logMessage('화재 감지가 중지되었습니다', 'info');
                 }
             }
@@ -646,10 +669,27 @@
                     this.updateFireStatus('🔥 화재 감지됨!', 'alert');
                     this.updateMonitoringAreaToFire();
                     let max = 0;
+                    const ctx = this.drawCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, this.drawCanvas.width, this.drawCanvas.height);
                     result.detections.forEach(res=>{
                         if (res.class_name == 'fire') {
                             max  = max < res.confidence ? res.confidence: max
                         }
+                        if (res.class_name !== 'fire') return;
+                        const bbox = res.bbox;
+                        const scaledX1 = bbox.x1 * this.scaleX;
+                        const scaledY1 = bbox.y1 * this.scaleY;
+                        const scaledWidth = bbox.width * this.scaleX;
+                        const scaledHeight = bbox.height * this.scaleY;
+
+                        const className = result.class_name;
+                        const confidence = result.confidence;
+
+                        // 바운딩 박스 그리기
+                        ctx.strokeStyle = 'red'; // 박스 테두리 색상
+                        ctx.lineWidth = 2;       // 박스 테두리 두께
+                        ctx.strokeRect(scaledX1, scaledY1, scaledWidth, scaledHeight);
+
                     })
 
                     this.logMessage(`${timestamp} - 화재가 감지되었습니다! (신뢰도: ${(max * 100).toFixed(1)}%)`, 'error');
@@ -661,6 +701,9 @@
                             icon: '🔥'
                         });
                     }
+
+
+
                 } else {
                     // this.updateFireStatus('정상', 'normal'); 정상은 없앰
                     this.resetMonitoringArea();
@@ -675,8 +718,30 @@
                         fillColor: '#f44336',
                         fillOpacity: 0.5
                     });
-                    this.monitoringArea.setPopupContent('⚠️ 모니터링 영역 - 상태: 화재 감지됨!');
+                    const content =  document.createElement("div")
+
+                    const textElement = document.createElement("div")
+                    textElement.textContent = "⚠️ 모니터링 영역 - 상태: 화재 감지됨!"
+
+                    const resetBtn = document.createElement("button")
+                    resetBtn.textContent = "문제없음";
+                    resetBtn.className = 'btn btn-secondary'
+                    resetBtn.onclick = ()=> {
+                        this.resetMonitoringArea();
+                        this.updateFireStatus('정상', 'normal');
+
+                        const timestamp = new Date().toLocaleTimeString();
+                        this.logMessage(`${timestamp} - 정상 상태 사용자가 확인했습니다`, 'success')
+                    }
+
+                    content.appendChild(textElement)
+                    content.appendChild(resetBtn)
+
+                    this.monitoringArea.setPopupContent(content);
                 }
+            }
+            hello(){
+                alert("HELLO");
             }
 
             resetMonitoringArea() {

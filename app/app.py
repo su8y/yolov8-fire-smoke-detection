@@ -1,6 +1,7 @@
 import os
 import random
 import cv2
+from fastapi.staticfiles import StaticFiles
 import numpy as np
 import io
 import base64
@@ -23,6 +24,7 @@ app = FastAPI(
     version="1.0.0",
 )
 BASE_DIR = Path(__file__).resolve().parent
+app.mount("/static", StaticFiles(directory=f"{BASE_DIR}/static"), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR) +"/templates")
 
 try:
@@ -39,6 +41,14 @@ async def read_root(request: Request):
         "title" : "FastAPI AI 모델 분류 예제",
     }
     return templates.TemplateResponse("index.html", data)
+
+@app.get("/monitor",response_class=HTMLResponse, summary="Response Index Page")
+async def read_monitor(request: Request):
+    data = {
+        "request": request,
+        "title" : "FastAPI AI 모델 모니터링 POC",
+    }
+    return templates.TemplateResponse("monitor.html", data)
 
 @app.post("/detection",summary="YOLOv8 AI Fire Detection")
 async def detectionYOLOv8(file: UploadFile = File(...)):
@@ -162,4 +172,4 @@ async def detectionYOLOv8(file: UploadFile = File(...)):
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
