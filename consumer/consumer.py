@@ -9,10 +9,13 @@ import io
 import uuid
 
 import cv2
+import logging
 import numpy as np
 import torch
 import torchvision
 from ultralytics import YOLO # 이미지 파일명으로 사용할 고유 ID 생성
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # --- Kafka 및 저장소 설정 ---
 KAFKA_BROKER = 'localhost:9092'  # Kafka 브로커 주소 (필요에 따라 변경)
@@ -94,6 +97,9 @@ def consume_images_from_kafka():
         consumer.subscribe([KAFKA_TOPIC])
 
         print(f"Listening for messages on topic '{KAFKA_TOPIC}'...")
+        BATCH_SIZE = 8
+        image_batch = []
+        key_batch = []
         while True:
             # 메시지 폴링 (timeout 설정으로 일정 시간 대기)
             msg = consumer.poll(timeout=1.0) # 1초 대기
@@ -112,13 +118,19 @@ def consume_images_from_kafka():
             key_bytes = msg.key()
             image_bytes = msg.value()
 
-            message_count += 1
             # 키(key)는 바이트이므로 디코딩 (Producer에서 String으로 보냈다면)
             # Producer가 UUID.randomUUID().toString()으로 보냈으므로 UTF-8 디코딩
             image_key = key_bytes.decode('utf-8') if key_bytes else str(uuid.uuid4()) # 키 없으면 새 UUID 생성
 
-            print(f"Received message from topic '{msg.topic()}', partition {msg.partition()}, offset {msg.offset()}")
-            print(f"  Key: {image_key}, Image Bytes Size: {len(image_bytes)} bytes")
+            logger.info(f"Received message from topic '{msg.topic()}', partition {msg.partition()}, offset {msg.offset()}")
+            logger.info(f"  Key: {image_key}, Image Bytes Size: {len(image_bytes)} bytes")
+            image = toImage(image_bytes)                                    
+            message_count += 1
+
+            image_batch.append(image)
+            key_batch.append(image_key)
+            if len(image_batch) < BATCH_SIZE: continue
+
 
             try:
                 # 바이트 데이터를 Pillow Image 객체로 변환
@@ -128,10 +140,15 @@ def consume_images_from_kafka():
                     if model is None:
                         print("Model is not loaded. Skipping inference.")
                         continue
-                    image = toImage(image_bytes)                                    
-                    inference_results = model(image)
-                    [isFire, detections] = parse_results(inference_results)
-                    print(f"Fire detected: {isFire}, Detections: {len(detections)}")
+                    inference_batch_results = model(image_batch)
+                    image_batch = []  # 배치 처리 후 이미지 리스트 초기화
+                    key_batch = []    # 배치 처리 후 키 리스트 초기화
+                    logger.info(f"Processed batch of {BATCH_SIZE} images.")
+                    # for i, inference_results in enumerate(inference_batch_results):
+                    #     image_key = key_batch[i]
+                    #     print(f"Processing image with key: {image_key}")
+                    #     [isFire, detections] = parse_results(inference_results)
+                    #     print(f"Fire detected: {isFire}, Detections: {len(detections)}")
 
             except Exception as e:
                 print(f"Error processing image: {e}")
@@ -139,8 +156,8 @@ def consume_images_from_kafka():
     except KeyboardInterrupt:
         elapsed_time = time.time() - start_time
         tps = message_count / elapsed_time if elapsed_time > 0 else 0
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] TPS: {tps:.2f} messages/sec ({message_count} messages in {elapsed_time:.2f} seconds)")
-        print("\nConsumer stopped by user.")
+        logger.info(f"[{datetime.now().strftime('%H:%M:%S')}] TPS: {tps:.2f} messages/sec ({message_count} messages in {elapsed_time:.2f} seconds)")
+        logger.info("\nConsumer stopped by user.")
     except KafkaException as e:
         print(f"Kafka error: {e}")
     finally:
