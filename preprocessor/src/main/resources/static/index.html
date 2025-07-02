@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>화재 감지 실시간 지도 시스템</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-card: #1c2128;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-blue: #1f6feb;
+            --accent-green: #238636;
+            --accent-red: #da3633;
+            --accent-orange: #fd7e14;
+            --border-subtle: #30363d;
+            --shadow-dark: rgba(0, 0, 0, 0.4);
+            --shadow-glow: rgba(31, 111, 235, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+            gap: 24px;
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .video-section, .map-section {
+            background: var(--bg-secondary);
+            padding: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .video-section::before, .map-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+            opacity: 0.5;
+        }
+
+        h1 {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 32px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .video-container {
+            position: relative;
+            margin-bottom: 24px;
+            background: var(--bg-tertiary);
+            overflow: hidden;
+        }
+
+        #videoElement {
+            width: 100%;
+            max-height: 320px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            height: 320px;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .btn-primary:hover {
+            background: #2ea043;
+            box-shadow: 0 0 16px rgba(35, 134, 54, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: #f85149;
+            box-shadow: 0 0 16px rgba(218, 54, 51, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .btn-secondary:hover {
+            background: #388bfd;
+            box-shadow: 0 0 16px rgba(31, 111, 235, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--bg-tertiary);
+            border-color: var(--border-subtle);
+            color: var(--text-muted);
+            box-shadow: none;
+        }
+
+        .btn:disabled::before {
+            display: none;
+        }
+
+        .status-panel {
+            background: var(--bg-card);
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            position: relative;
+        }
+
+        .status-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-value {
+            font-weight: 500;
+            padding: 4px 12px;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .status-normal .status-value {
+            color: var(--accent-green);
+            background: rgba(35, 134, 54, 0.1);
+        }
+
+        .status-alert .status-value {
+            color: var(--accent-red);
+            background: rgba(218, 54, 51, 0.1);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        #map {
+            height: 440px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            position: relative;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .detection-log {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            padding: 16px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .detection-log::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .detection-log::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        .detection-log::-webkit-scrollbar-thumb {
+            background: var(--border-subtle);
+        }
+
+        .detection-log::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        .log-entry {
+            margin-bottom: 6px;
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border-left: 3px solid transparent;
+            font-size: 11px;
+        }
+
+        .log-info {
+            border-left-color: var(--accent-blue);
+            color: var(--text-secondary);
+        }
+
+        .log-warning {
+            border-left-color: var(--accent-orange);
+            color: #f0883e;
+        }
+
+        .log-error {
+            border-left-color: var(--accent-red);
+            color: #f85149;
+        }
+
+        .log-success {
+            border-left-color: var(--accent-green);
+            color: #56d364;
+        }
+
+        /* Dark theme for Leaflet map */
+        .leaflet-container {
+            background: var(--bg-tertiary);
+        }
+
+        .leaflet-control-container .leaflet-control {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+        }
+
+        .leaflet-control-zoom a {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+        }
+
+        .leaflet-popup-tip {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+                gap: 16px;
+                padding: 16px;
+            }
+            
+            .video-section, .map-section {
+                padding: 16px;
+            }
+            
+            .controls {
+                justify-content: center;
+            }
+            
+            #map {
+                height: 300px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 24px;
+            }
+        }
+
+        /* Subtle animations */
+        .video-section, .map-section, .status-panel, .detection-log {
+            transition: all 0.3s ease;
+        }
+
+        .status-panel:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px var(--shadow-glow);
+        }
+
+        /* Glassmorphism effect for cards */
+        .video-section, .map-section {
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>화재 감지 실시간 지도 시스템</h1>
+        
+        <div class="video-section">
+            <h2>📹 비디오 모니터링</h2>
+            
+            <div class="video-container" id="video-container">
+                <video id="videoElement" controls autoplay muted style="display: none;"></video>
+                <div id="videoPlaceholder" class="video-placeholder">
+                    비디오 소스를 선택해주세요
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="startCamera" class="btn btn-primary">📷 카메라 시작</button>
+                <button id="stopCamera" class="btn btn-danger" disabled>⏹️ 카메라 중지</button>
+                <div class="file-input-wrapper">
+                    <button class="btn btn-secondary" onclick="document.getElementById('videoFile').click()">📁 파일 선택</button>
+                    <input type="file" id="videoFile" accept="video/*" style="display: none;">
+                </div>
+                <button id="startDetection" class="btn btn-primary" disabled>🔍 감지 시작</button>
+                <button id="stopDetection" class="btn btn-danger" disabled>⏸️ 감지 중지</button>
+            </div>
+
+            <div class="status-panel">
+                <div class="status-item status-normal" id="cameraStatus">
+                    <span class="status-label">카메라 상태:</span>
+                    <span class="status-value">대기중</span>
+                </div>
+                <div class="status-item status-normal" id="detectionStatus">
+                    <span class="status-label">감지 상태:</span>
+                    <span class="status-value">중지됨</span>
+                </div>
+                <div class="status-item status-normal" id="fireStatus">
+                    <span class="status-label">화재 감지:</span>
+                    <span class="status-value">정상</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="map-section">
+            <h2>🗺️ 실시간 지도</h2>
+            <div id="map"></div>
+            
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 1rem; font-weight: 600; color: var(--text-primary);">📋 감지 로그</h3>
+            <div class="detection-log" id="detectionLog">
+                <div class="log-entry log-info">시스템이 초기화되었습니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        class FireDetectionSystem {
+            constructor() {
+                this.map = null;
+                this.monitoringArea = null;
+                this.videoStream = null;
+                this.detectionInterval = null;
+                this.canvas = null;
+                this.isDetecting = false;
+                this.apiEndpoint = '/detection';
+
+                this.scaleX = null;
+                this.scaleY = null;
+                
+                this.initMap();
+                this.initEventListeners();
+                this.setupCanvas();
+                this.logMessage('시스템 초기화 완료', 'info');
+            }
+
+            initMap() {
+                // 지도 초기화 (서울 중심)
+                this.map = L.map('map').setView([37.5665, 126.9780], 13);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+
+                // 모니터링 영역 폴리곤 (파란색으로 초기화)
+                const monitoringCoords = [
+                    [37.5665, 126.9780],
+                    [37.5665, 126.9880],
+                    [37.5765, 126.9880],
+                    [37.5765, 126.9780]
+                ];
+
+                this.monitoringArea = L.polygon(monitoringCoords, {
+                    color: '#2196F3',
+                    fillColor: '#2196F3',
+                    fillOpacity: 0.3,
+                    weight: 3
+                }).addTo(this.map);
+
+                this.monitoringArea.bindPopup('모니터링 영역 - 상태: 정상');
+                this.logMessage('지도 및 모니터링 영역 초기화 완료', 'info');
+            }
+
+            setupCanvas() {
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = 640;
+                this.canvas.height = 480;
+
+                this.drawCanvas = document.createElement('canvas');
+                this.drawCanvas.width = 640;
+                this.drawCanvas.height = 480;
+                this.drawCanvas.style = "position:absolute; top:0; left:0; pointer-events:none;";
+
+                
+                const container = document.getElementById("video-container")
+                container.appendChild(this.drawCanvas);
+
+                let videoElement = document.getElementById("videoElement");
+                if(videoElement.offsetWidth == 0) {
+                    videoElement = document.getElementById("videoPlaceholder")
+                }
+                this.scaleX = videoElement.offsetWidth / 640;
+                this.scaleY = videoElement.offsetHeight / 480;
+                console.log(this.scaleX, this.scaleY)
+
+            }
+
+            initEventListeners() {
+                document.getElementById('startCamera').addEventListener('click', () => this.startCamera());
+                document.getElementById('stopCamera').addEventListener('click', () => this.stopCamera());
+                document.getElementById('videoFile').addEventListener('change', (e) => this.handleVideoFile(e));
+                document.getElementById('startDetection').addEventListener('click', () => this.startDetection());
+                document.getElementById('stopDetection').addEventListener('click', () => this.stopDetection());
+            }
+
+            async startCamera() {
+                try {
+                    this.videoStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { width: 640, height: 480 } 
+                    });
+                    
+                    const videoElement = document.getElementById('videoElement');
+                    const placeholder = document.getElementById('videoPlaceholder');
+                    
+                    videoElement.srcObject = this.videoStream;
+                    videoElement.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    
+                    this.updateCameraStatus('활성', 'normal');
+                    this.toggleButtons(true, false);
+                    this.logMessage('카메라가 성공적으로 시작되었습니다', 'success');
+                    
+                } catch (error) {
+                    this.logMessage(`카메라 시작 실패: ${error.message}`, 'error');
+                    alert('카메라에 접근할 수 없습니다. 권한을 확인해주세요.');
+                }
+            }
+
+            stopCamera() {
+                if (this.videoStream) {
+                    this.videoStream.getTracks().forEach(track => track.stop());
+                    this.videoStream = null;
+                }
+                
+                const videoElement = document.getElementById('videoElement');
+                const placeholder = document.getElementById('videoPlaceholder');
+                
+                videoElement.style.display = 'none';
+                placeholder.style.display = 'flex';
+                
+                this.stopDetection();
+                this.updateCameraStatus('대기중', 'normal');
+                this.toggleButtons(false, true);
+                this.logMessage('카메라가 중지되었습니다', 'info');
+            }
+
+            handleVideoFile(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const videoElement = document.getElementById('videoElement');
+                    const placeholder = document.getElementById('videoPlaceholder');
+                    
+                    const url = URL.createObjectURL(file);
+                    videoElement.src = url;
+                    videoElement.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    
+                    videoElement.addEventListener('loadeddata', () => {
+                        this.updateCameraStatus('파일 로드됨', 'normal');
+                        this.toggleButtons(true, false);
+                        this.logMessage(`비디오 파일이 로드되었습니다: ${file.name}`, 'success');
+                    });
+                }
+            }
+
+            startDetection() {
+                if (!this.isDetecting) {
+                    this.isDetecting = true;
+                    this.updateDetectionStatus('실행중', 'alert');
+                    this.toggleDetectionButtons(false, true);
+                    
+                    // 3초마다 프레임 캡처 및 감지 요청
+                    this.detectionInterval = setInterval(() => {
+                        this.captureAndDetect();
+                    }, 1000);
+                    
+                    this.logMessage('화재 감지가 시작되었습니다', 'success');
+                }
+            }
+
+            stopDetection() {
+                if (this.isDetecting) {
+                    this.isDetecting = false;
+                    clearInterval(this.detectionInterval);
+
+
+                    this.updateDetectionStatus('중지됨', 'normal');
+                    this.updateFireStatus('정상', 'normal');
+                    this.toggleDetectionButtons(true, false);
+                    // this.resetMonitoringArea(); // stopDetection을 한다고 해서 화재가 중지되지 않게한다. 
+                    this.logMessage('화재 감지가 중지되었습니다', 'info');
+                }
+            }
+
+            async captureAndDetect() {
+                try {
+                    const videoElement = document.getElementById('videoElement');
+                    
+                    if (!videoElement.videoWidth || !videoElement.videoHeight) {
+                        this.logMessage('비디오 프레임을 읽을 수 없습니다', 'warning');
+                        return;
+                    }
+
+                    // 비디오 프레임을 캔버스에 그리기
+                    const ctx = this.canvas.getContext('2d');
+                    ctx.drawImage(videoElement, 0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 캔버스를 Blob으로 변환
+                    this.canvas.toBlob(async (blob) => {
+                        await this.sendFrameForDetection(blob);
+                    }, 'image/jpeg', 0.8);
+                    
+                } catch (error) {
+                    this.logMessage(`프레임 캡처 오류: ${error.message}`, 'error');
+                }
+            }
+
+            async sendFrameForDetection(imageBlob) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', imageBlob, 'frame.jpg');
+                    
+                    const response = await fetch(this.apiEndpoint, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log(result)
+                    this.handleDetectionResult(result);
+                    
+                } catch (error) {
+                    this.logMessage(`API 호출 실패: ${error.message}`, 'error');
+                    
+                    // 임시로 랜덤하게 화재 감지 시뮬레이션 (API 연결 안될 때)
+                    const mockResult = {
+                        detected: Math.random() > 0.8, // 20% 확률로 화재 감지
+                        confidence: Math.random(),
+                        timestamp: new Date().toISOString()
+                    };
+                    this.handleDetectionResult(mockResult);
+                }
+            }
+
+            handleDetectionResult(result) {
+                const timestamp = new Date().toLocaleTimeString();
+                
+                if (result.detection_count > 0 || (result.detections && result.detections.some(p => p.class_name === 'fire'))) {
+                    this.updateFireStatus('🔥 화재 감지됨!', 'alert');
+                    this.updateMonitoringAreaToFire();
+                    let max = 0;
+                    const ctx = this.drawCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+                    result.detections.forEach(res=>{
+                        if (res.class_name == 'fire') {
+                            max  = max < res.confidence ? res.confidence: max
+                        }
+                        if (res.class_name !== 'fire') return;
+                        const bbox = res.bbox;
+                        const scaledX1 = bbox.x1 * this.scaleX;
+                        const scaledY1 = bbox.y1 * this.scaleY;
+                        const scaledWidth = bbox.width * this.scaleX;
+                        const scaledHeight = bbox.height * this.scaleY;
+
+                        const className = result.class_name;
+                        const confidence = result.confidence;
+
+                        // 바운딩 박스 그리기
+                        ctx.strokeStyle = 'red'; // 박스 테두리 색상
+                        ctx.lineWidth = 2;       // 박스 테두리 두께
+                        ctx.strokeRect(scaledX1, scaledY1, scaledWidth, scaledHeight);
+
+                    })
+
+                    this.logMessage(`${timestamp} - 화재가 감지되었습니다! (신뢰도: ${(max * 100).toFixed(1)}%)`, 'error');
+                    
+                    // 알림 표시
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('🔥 화재 감지!', {
+                            body: '모니터링 영역에서 화재가 감지되었습니다.',
+                            icon: '🔥'
+                        });
+                    }
+
+
+
+                } else {
+                    // this.updateFireStatus('정상', 'normal'); 정상은 없앰
+                    this.resetMonitoringArea();
+                    this.logMessage(`${timestamp} - 정상 상태 확인`, 'info');
+                }
+            }
+
+            updateMonitoringAreaToFire() {
+                if (this.monitoringArea) {
+                    this.monitoringArea.setStyle({
+                        color: '#f44336',
+                        fillColor: '#f44336',
+                        fillOpacity: 0.5
+                    });
+                    const content =  document.createElement("div")
+
+                    const textElement = document.createElement("div")
+                    textElement.textContent = "⚠️ 모니터링 영역 - 상태: 화재 감지됨!"
+
+                    const resetBtn = document.createElement("button")
+                    resetBtn.textContent = "문제없음";
+                    resetBtn.className = 'btn btn-secondary'
+                    resetBtn.onclick = ()=> {
+                        this.resetMonitoringArea();
+                        this.updateFireStatus('정상', 'normal');
+
+                        const timestamp = new Date().toLocaleTimeString();
+                        this.logMessage(`${timestamp} - 정상 상태 사용자가 확인했습니다`, 'success')
+                    }
+
+                    content.appendChild(textElement)
+                    content.appendChild(resetBtn)
+
+                    this.monitoringArea.setPopupContent(content);
+                }
+            }
+            hello(){
+                alert("HELLO");
+            }
+
+            resetMonitoringArea() {
+                if (this.monitoringArea) {
+                    this.monitoringArea.setStyle({
+                        color: '#2196F3',
+                        fillColor: '#2196F3',
+                        fillOpacity: 0.3
+                    });
+                    this.monitoringArea.setPopupContent('모니터링 영역 - 상태: 정상');
+                }
+            }
+
+            updateCameraStatus(status, type) {
+                const element = document.getElementById('cameraStatus');
+                element.className = `status-item status-${type}`;
+                element.querySelector('.status-value').textContent = status;
+            }
+
+            updateDetectionStatus(status, type) {
+                const element = document.getElementById('detectionStatus');
+                element.className = `status-item status-${type}`;
+                element.querySelector('.status-value').textContent = status;
+            }
+
+            updateFireStatus(status, type) {
+                const element = document.getElementById('fireStatus');
+                element.className = `status-item status-${type}`;
+                element.querySelector('.status-value').textContent = status;
+            }
+
+            toggleButtons(cameraActive, cameraInactive) {
+                document.getElementById('startCamera').disabled = cameraActive;
+                document.getElementById('stopCamera').disabled = cameraInactive;
+                document.getElementById('startDetection').disabled = !cameraActive;
+            }
+
+            toggleDetectionButtons(startEnabled, stopEnabled) {
+                document.getElementById('startDetection').disabled = !startEnabled;
+                document.getElementById('stopDetection').disabled = !stopEnabled;
+            }
+
+            logMessage(message, type) {
+                const logContainer = document.getElementById('detectionLog');
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry log-${type}`;
+                logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                // 로그가 너무 많아지면 오래된 것 제거
+                if (logContainer.children.length > 50) {
+                    logContainer.removeChild(logContainer.firstChild);
+                }
+            }
+        }
+
+        // 페이지 로드시 시스템 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            new FireDetectionSystem();
+            
+            // 알림 권한 요청
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        });
+    </script>
+</body>
+</html>
