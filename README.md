@@ -1,5 +1,10 @@
 # Fire and Smoke Detection
-
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Spring](https://img.shields.io/badge/Spring-6DB33F?style=flat-square&logo=spring&logoColor=white)
+![Java](https://img.shields.io/badge/Java-007396?style=flat-square&logo=java&logoColor=white)
+![Kafka](https://img.shields.io/badge/Kafka-231F20?style=flat-square&logo=apachekafka&logoColor=white)
 ## VOLOv8
 YOLOv8을 사용해서 실시간(real-time) 스트리밍 영상(RTMP,RSTP)을 통해서 불과 연기를 감지 모니터링 하는 프로젝트입니다.
 
