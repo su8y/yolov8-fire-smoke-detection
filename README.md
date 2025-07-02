@@ -5,8 +5,8 @@
 ![Spring](https://img.shields.io/badge/Spring-6DB33F?style=flat-square&logo=spring&logoColor=white)
 ![Java](https://img.shields.io/badge/Java-007396?style=flat-square&logo=java&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Kafka-231F20?style=flat-square&logo=apachekafka&logoColor=white)
-## VOLOv8
-YOLOv8을 사용해서 실시간(real-time) 스트리밍 영상(RTMP,RSTP)을 통해서 불과 연기를 감지 모니터링 하는 프로젝트입니다.
+
+CNN 모델을 사용해서 실시간(real-time) 스트리밍 영상(RTMP,RSTP)을 통해서 불과 연기를 감지 모니터링 하는 프로젝트입니다.
 
 ### OverView
 
