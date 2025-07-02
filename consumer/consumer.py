@@ -97,7 +97,7 @@ def consume_images_from_kafka():
         consumer.subscribe([KAFKA_TOPIC])
 
         print(f"Listening for messages on topic '{KAFKA_TOPIC}'...")
-        BATCH_SIZE = 8
+        BATCH_SIZE = 32
         image_batch = []
         key_batch = []
         while True:

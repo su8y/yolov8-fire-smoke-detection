@@ -36,6 +36,7 @@ YOLOv8을 사용해서 실시간(real-time)영상을 통해서 불과 연기를 
 
 
 ### 테스트 환경
+Graphics: NVIDIA RTX A6000
 Jmeter 
 - **Thread Group**: Thread=200, Ramp up period=10, Duration=60, 
 - **Image**: size=(800x544), ext=jpg
@@ -45,3 +46,11 @@ Jmeter
 > **결과** min=97, max=8294, average=4618, median=5131, std=1310.92, thorughtput=38.3/sec   
 > model 처리 시간은 평균적으로 10ms 걸림 
 
+
+### 전처리 서버 + 추론 서버 + kafka  (추론 서버만 계산, 전처리 서버 tps 600이상)
+TPS: 45.65 messages/sec (913 messages in 20 seconds)
+GPU 사용량이 낮음(5~20)
+
+### 전처리 서버 + 추론 서버 + kafka + BATCH_SIZE=max(8,16,32) = 32 (추론 서버만 계산, 전처리 서버 tps 600이상)
+TPS: 60.4 messages/sec (1208 messages in 20 seconds)
+GPU 사용량이 꽤 높음(20 ~ 50) 최대 60% 까지 튐.
