@@ -13,4 +13,4 @@ public interface ImageCompressionStrategy {
      * @throws IOException 이미지 압축 중 발생할 수 있는 예외
      */
     byte[] compress(BufferedImage image) throws IOException;
-} 
+}

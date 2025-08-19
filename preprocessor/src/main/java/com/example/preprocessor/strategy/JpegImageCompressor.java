@@ -15,8 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-public class JpegImageCompressor implements ImageCompressionStrategy{
-    @Value("${image.compression.quality:0.8}") // 기본값 0.8 (80%)
+public class JpegImageCompressor implements ImageCompressionStrategy {
+    @Value("${image.compression.quality:0.8}")
     private float compressionQuality;
 
     @Override
@@ -33,16 +33,16 @@ public class JpegImageCompressor implements ImageCompressionStrategy{
         ImageWriter writer = writers.next();
         ImageWriteParam param = writer.getDefaultWriteParam();
         param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-        param.setCompressionQuality(compressionQuality); // 압축 품질 설정
+        param.setCompressionQuality(compressionQuality);
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
+                ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
             writer.setOutput(ios);
             writer.write(null, new IIOImage(image, null, null), param);
             ios.flush();
             return baos.toByteArray();
         } finally {
-            writer.dispose(); // 리소스 해제
+            writer.dispose();
         }
-    }   
+    }
 }

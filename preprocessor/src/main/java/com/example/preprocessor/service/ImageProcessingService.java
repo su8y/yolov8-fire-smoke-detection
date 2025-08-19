@@ -19,12 +19,12 @@ public class ImageProcessingService {
     private static final int TARGET_HEIGHT = 600;
 
     private final ImageResizer imageResizer;
-    private final ImageCompressionStrategy imageCompressor;   // DIP: 인터페이스에 의존
+    private final ImageCompressionStrategy imageCompressor;
     private final KafkaProducerService kafkaProducerService;
 
     public ImageProcessingService(
             ImageResizer imageResizer,
-            ImageCompressionStrategy imageCompressor,   // 주입될 실제 구현체는 JpegImageCompressor
+            ImageCompressionStrategy imageCompressor,
             KafkaProducerService kafkaProducerService) {
         this.imageResizer = imageResizer;
         this.imageCompressor = imageCompressor;
@@ -48,21 +48,13 @@ public class ImageProcessingService {
         // 2. 이미지 리사이징
         BufferedImage resizedImage = imageResizer.resize(originalImage, TARGET_WIDTH, TARGET_HEIGHT);
 
-
-        // 4. 이미지 압축 (JPEG)
+        // 3. 이미지 압축 (JPEG)
         byte[] compressedImageBytes = imageCompressor.compress(resizedImage);
 
-        // 5. Kafka 토픽에 전송
+        // 4. Kafka 토픽에 전송
         String imageId = UUID.randomUUID().toString(); // 고유 이미지 ID 생성
         kafkaProducerService.sendMessage(imageId, compressedImageBytes);
-        // 원본 저장 
-        //ByteArrayOutputStream baso = new ByteArrayOutputStream();
-        //ImageIO.write(resizedImage, "jpg", baso);
-        //kafkaProducerService.sendMessage(imageId + "_original", baso.toByteArray());
         
-
-
-
         return imageId;
     }
 }

@@ -26,7 +26,6 @@ public class KafkaProducerService {
      * @param imageBytes 처리된 이미지 바이트 배열
      */
     public void sendMessage(String key, byte[] imageBytes) {
-        // 비동기 전송 및 콜백 처리로 성공/실패 로깅
         var future = kafkaTemplate.send(topicName, key, imageBytes);
 
         future.thenAccept(result -> {
@@ -37,7 +36,7 @@ public class KafkaProducerService {
                     key);
         }).exceptionally(ex -> {
             logger.error("Failed to send message to Kafka. Key: {}, Error: {}", key, ex.getMessage(), ex);
-            return null; // 예외 처리 후 null 반환 (또는 다른 CompletableFuture 처리)
+            return null;
         });
     }
 }

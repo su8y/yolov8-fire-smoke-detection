@@ -17,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.preprocessor.service.ImageProcessingService;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
 @RestController
 @RequestMapping("/api/images")
 public class ImageUploadController {
@@ -29,11 +28,11 @@ public class ImageUploadController {
     public ImageUploadController(ImageProcessingService imageProcessingService) {
         this.imageProcessingService = imageProcessingService;
     }
+
     @PostMapping("/test")
     public String postMethodName() {
         return "test";
     }
-    
 
     @PostMapping("/upload-process")
     @CrossOrigin(origins = "*") // CORS 설정: 모든 도메인 허용
@@ -56,7 +55,8 @@ public class ImageUploadController {
             return new ResponseEntity<>("Error processing image: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             logger.error("An unexpected error occurred: {}", e.getMessage(), e);
-            return new ResponseEntity<>("An unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("An unexpected error occurred: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
