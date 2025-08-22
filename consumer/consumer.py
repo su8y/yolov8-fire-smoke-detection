@@ -134,7 +134,6 @@ def consume_images_from_kafka():
 
             try:
                 # 바이트 데이터를 Pillow Image 객체로 변환
-                # JPEG 형식을 가정합니다. 만약 PNG 등 다른 형식이라면, Pillow가 알아서 감지합니다.
                 with torch.no_grad():
                     # YOLO 모델로 예측 수행
                     if model is None:
@@ -144,11 +143,6 @@ def consume_images_from_kafka():
                     image_batch = []  # 배치 처리 후 이미지 리스트 초기화
                     key_batch = []    # 배치 처리 후 키 리스트 초기화
                     logger.info(f"Processed batch of {BATCH_SIZE} images.")
-                    # for i, inference_results in enumerate(inference_batch_results):
-                    #     image_key = key_batch[i]
-                    #     print(f"Processing image with key: {image_key}")
-                    #     [isFire, detections] = parse_results(inference_results)
-                    #     print(f"Fire detected: {isFire}, Detections: {len(detections)}")
 
             except Exception as e:
                 print(f"Error processing image: {e}")
