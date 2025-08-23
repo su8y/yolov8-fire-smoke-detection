@@ -19,6 +19,121 @@ RTMP / RTSP 기반 실시간 스트리밍 영상을 YOLOv8 기반 CNN 모델로 
 
 오른쪽 이미지에서 볼 수 있듯이, YOLOv8 모델은 불꽃(`fire`)과 연기(`smoke`)를 정확히 구분하여 사각형 형태로 영역을 표시하고, 해당 객체의 클래스 이름과 신뢰도(%)를 함께 보여줍니다.
 
+## Project Architecture
+
+이 프로젝트는 두 가지 주요 워크플로우를 가집니다.
+
+1.  **이벤트 기반 추론 파이프라인**: 이미지 처리를 위해 Kafka를 중심으로 한 비동기 파이프라인입니다.
+2.  **독립형 REST API 서버**: 실시간 데모 및 간단한 테스트를 위한 단일 FastAPI 서버입니다.
+
+-   **`preprocessor` (Java/Spring)**: 클라이언트로부터 이미지를 받아 크기 조정, 압축 등 전처리를 수행한 후 Kafka 토픽으로 메시지를 전송합니다.
+-   **`broker` (Kafka)**: `preprocessor`와 `consumer` 사이의 이미지 데이터를 안정적으로 중개하는 메시지 큐입니다.
+-   **`consumer` (Python)**: Kafka 토픽에서 이미지 메시지를 실시간으로 구독(consume)하고, YOLOv8 모델을 사용해 화재/연기 탐지 추론을 수행합니다.
+-   **`app` (Python/FastAPI)**: Kafka와 연동되지 않는 독립적인 API 서버입니다. 이미지 업로드, 추론, 결과 반환까지 모든 과정을 동기적으로 처리하며, 간단한 테스트 및 데모에 사용됩니다.
+
+## Quick Start
+
+### Prerequisites
+
+-   Java 17 or higher
+-   Python 3.8 or higher
+-   Docker & Docker Compose
+-   (Optional) NVIDIA GPU & CUDA for hardware acceleration
+
+### 1. Event-Driven Pipeline 실행
+
+#### Step 1: Kafka Broker 실행
+
+터미널에서 `broker` 디렉토리로 이동하여 Docker Compose를 실행합니다.
+
+```bash
+cd broker
+docker-compose up -d
+```
+
+#### Step 2: Preprocessor 실행
+
+`preprocessor`는 Gradle을 사용하여 빌드하고 실행할 수 있습니다.
+
+```bash
+cd preprocessor
+./gradlew bootRun
+```
+
+서버는 `localhost:8000`에서 실행됩니다.
+
+#### Step 3: Consumer 실행
+
+먼저, 필요한 Python 패키지를 설치합니다. `consumer` 디렉토리에서 다음을 실행하세요.
+
+```bash
+# consumer/ 디렉토리로 이동
+cd consumer
+
+# 가상환경 생성 및 활성화 (권장)
+python -m venv venv
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate    # Windows
+
+# 필요 패키지 설치
+pip install ultralytics confluent-kafka pillow opencv-python torch torchvision
+```
+
+패키지 설치 후, consumer를 실행합니다.
+
+```bash
+python consumer.py
+```
+
+#### Step 4: 테스트 이미지 전송
+
+새 터미널을 열고 `curl` 명령어를 사용하여 `preprocessor` 서버로 이미지를 전송합니다.
+
+```bash
+curl -X POST -F "file=@/path/to/your/image.jpg" http://localhost:8000/api/images/upload-process
+```
+
+`consumer.py`를 실행한 터미널에서 이미지 처리 로그를 확인할 수 있습니다.
+
+### 2. Standalone API Server 실행
+
+이 서버는 Kafka 없이 단독으로 실행됩니다.
+
+#### Step 1: 의존성 설치
+
+`app` 디렉토리에서 필요한 Python 패키지를 설치합니다.
+
+```bash
+# app/ 디렉토리로 이동
+cd app
+
+# 가상환경 생성 및 활성화 (권장)
+python -m venv venv
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate    # Windows
+
+# 필요 패키지 설치
+pip install "fastapi[all]" uvicorn ultralytics python-multipart pillow opencv-python torch torchvision
+```
+
+#### Step 2: 서버 실행
+
+`app` 디렉토리에서 Uvicorn을 사용하여 서버를 실행합니다.
+
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8001 --reload
+```
+
+서버는 `localhost:8001`에서 실행됩니다.
+
+#### Step 3: API 테스트
+
+웹 브라우저에서 `http://localhost:8001`로 접속하여 UI를 확인하거나, `curl`을 사용하여 테스트할 수 있습니다.
+
+```bash
+curl -X POST -F "file=@/path/to/your/image.jpg" http://localhost:8001/detection
+```
+
 ## 학습 데이터셋
 본 프로젝트는 Kaggle에서 제공하는 다음 화재/연기 데이터셋을 사용해 학습했습니다.
 [Kaggle-Smoke-Fire-Detection-YOLO](https://www.kaggle.com/datasets/sayedgamal99/smoke-fire-detection-yolo/data)
