@@ -53,6 +53,7 @@ docker-compose up -d
 
 #### Step 2: Preprocessor 실행
 
+~~java 21을 사용하고 있다면 `gradle.properties`에 `org.gradle.java.installations.auto-detection=true`와 `org.gradle.java.installations.fromEnv=true`를 설정해주세요.~~
 `preprocessor`는 Gradle을 사용하여 빌드하고 실행할 수 있습니다.
 
 ```bash
@@ -149,28 +150,38 @@ curl -X POST -F "file=@/path/to/your/image.jpg" http://localhost:8001/detection
 <image src='images/val_batch1_labels.jpg'>
 
 ## 웹 서버 별 성능
-| 서버 구성 | TPS(sec) | response(avg, ms) |
-| :---------| -----------:| -----------:|
-| 단일 FastAPI | 38.3 |  4618 |
-
 
 ### 테스트 환경
-Graphics: NVIDIA RTX A6000
+Processor: AMD Ryzen 5 9600X 6-Core Processor, 3900Mhz, 6 Core, 12 Logical Processor
+Graphics: NVIDIA GeForce RTX 3050 8GB
+
 Jmeter 
-- **Thread Group**: Thread=200, Ramp up period=10, Duration=60, 
+- **Thread Group**: Thread=2000, Ramp up period=10, Duration=60, 
 - **Image**: size=(800x544), ext=jpg
 
 ### 단일 FastAPI + restApi
 TPS: 38.3 messages/sec 
 > 서버 처리 병목이 추론 자체보다 이미지 디코딩·전송 지연·단일 인스턴스 구조에 집중됨을 확인했습니다.
 
+### 추론 서버 + kafka + Yolo preprocessor + postprocessor
 
-### 전처리 서버 + 추론 서버 + kafka  (추론 서버만 계산, 전처리 서버 tps 600이상)
-TPS: 45.65 messages/sec (913 messages in 20 seconds)
-GPU 사용량이 낮음(5~20)
-> 멀티 프로세스 구조로 인해 CPU 오버헤드는 줄었으나, GPU 활용률이 낮아 추론 서버 단일 처리 효율에 한계가 있었습니다.
+|batch-size|TPS|Memory(MB)|
+|---|---|---|
+|8|TPS: 48.50 messages/sec (2000 messages in 41.24 seconds)|1150|
+|16|TPS: 54.12 messages/sec (2000 messages in 36.96 seconds)|1744|
+|32|TPS: 59.53 messages/sec (2000 messages in 33.60 seconds)|2906|
 
-### 전처리 서버 + 추론 서버 + kafka + BATCH_SIZE=max(8,16,32) = 32 (추론 서버만 계산, 전처리 서버 tps 600이상)
-TPS: 60.4 messages/sec (1208 messages in 20 seconds)
-GPU 사용량이 꽤 높음(20 ~ 50) 최대 60% 까지 튐.
-> GPU에 Batch 처리로 연산 효율을 극대화하면서 단일 스레드 대비 ≈ 1.6배 향상된 TPS를 확인했습니다.
+> Speed: 3.0ms preprocess, 12.6ms inference, 0.5ms postprocess per image at shape (1, 3, 800, 800) 데이터를 처리하는 과정에서 image scale 변경 및 정규화를 진행하며 36%의 리소스를 추론하는 서버에서 부담하는 것을 확인하였습니다.
+
+### 추론 서버(Consumer) Yolo with preprocessor, postprocessor + 전처리 서버 + kafka
+
+|batch-size|TPS|Memory(MB)|
+|---|---|---|
+|8(1)| TPS: 106.90 messages/sec (2000 messages in 18.71 seconds) | 994 |
+|8(2)| TPS: 108.14 messages/sec (2000 messages in 18.49 seconds) | 994 |
+|16| TPS: 112.24 messages/sec (2000 messages in 17.82 seconds) | 1552 |
+|32| TPS: 133.20 messages/sec (2000 messages in 15.02 seconds) | 2876MB |
+|32| TPS: 133.05 messages/sec (2000 messages in 15.03 seconds) | 2876MB |
+|64| TPS: 130.72 messages/sec (2000 messages in 15.30 seconds) | 5326MB |
+> 단일 FastAPI + RestAPI 와 비교하였을때 TPS 247.5% 향상하였습니다.
+> 메모리 효율대비 TPS 증가폭이 적기 때문에 평상시와 같은 경우에서는 8 batch size를 선택하는 것이 적절해보입니다.
