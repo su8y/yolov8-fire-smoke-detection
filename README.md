@@ -10,8 +10,6 @@ RTMP / RTSP 기반 실시간 스트리밍 영상을 YOLOv8 기반 CNN 모델로 
 
 ### OverView
 
-아래 이미지는 시스템이 불과 연기를 감지하기 전과 후의 상태를 명확하게 보여줍니다.
-
 ![TestGIF](images/wildfire_after.gif)
 
 | 감지 전 상태 (Non-detection)                               | 감지 후 상태 (Detection)                               |
@@ -19,7 +17,7 @@ RTMP / RTSP 기반 실시간 스트리밍 영상을 YOLOv8 기반 CNN 모델로 
 | ![감지 전 이미지](images/non-detection.png)               | ![감지 후 이미지](images/detection.png)               |
 | 화재나 연기가 감지되지 않은 **정상 상태**의 비디오 프레임입니다. | 화재 및 연기가 성공적으로 감지되어 **바운딩 박스**로 표시된 비디오 프레임입니다. |
 
-오른쪽 이미지에서 볼 수 있듯이, YOLOv8 모델은 불꽃(`fire`)과 연기(`smoke`)를 정확히 구분하여 사각형 형태로 영역을 표시하고, 해당 객체의 클래스 이름과 신뢰도(%)를 함께 보여줍니다.
+오른쪽 이미지에서 볼 수 있듯이, YOLOv8 모델은 불꽃(`fire`)과 연기(`smoke`)를 구분하여 영역을 표시하고, 해당 객체의 클래스 이름과 신뢰도(%)를 함께 보여줍니다.
 
 [Read Architecture](./ARCHITECTURE.md)
 
@@ -128,7 +126,7 @@ curl -X POST -F "file=@/path/to/your/image.jpg" http://localhost:8001/detection
 ```
 
 ## 학습 데이터셋
-본 프로젝트는 Kaggle에서 제공하는 다음 화재/연기 데이터셋을 사용해 학습했습니다.
+
 [Kaggle-Smoke-Fire-Detection-YOLO](https://www.kaggle.com/datasets/sayedgamal99/smoke-fire-detection-yolo/data)
 
 ## 평가 & 결과
