@@ -6,7 +6,7 @@
 ![Java](https://img.shields.io/badge/Java-007396?style=flat-square&logo=java&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Kafka-231F20?style=flat-square&logo=apachekafka&logoColor=white)
 
-RTMP / RTSP 기반 실시간 스트리밍 영상을 YOLOv8 기반 CNN 모델로 분석하여 불(fire)과 연기(smoke) 를 탐지하는 실시간 모니터링 프로젝트입니다.
+화재 영상을 YOLOv8 기반 **CNN 모델로 분석하여 불(fire)과 연기(smoke) 를 탐지**하는 실시간 모니터링 시스템입니다.
 
 ### OverView
 
