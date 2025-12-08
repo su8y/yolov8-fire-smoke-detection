@@ -176,5 +176,16 @@ TPS: 38.3 messages/sec
 > 단일 FastAPI + RestAPI 와 비교하였을때 TPS 247.5% 향상하였습니다.
 > 메모리 효율대비 TPS 증가폭이 적기 때문에 평상시와 같은 경우에서는 8 batch size를 선택하는 것이 적절해보입니다.
 
-### WebRTC 
-Tobe Continue
+### WebRTC (작업 예정)
+
+1. Goal
+    - Real-time Inference: CCTV/Webcam 비디오 스트림에 대해 500ms 미만의 지연시간으로 화재/연기를 탐지.
+    - Interactive Streaming: 탐지된 Bounding Box가 그려진 영상을 클라이언트(브라우저)에서 별도의 플러그인 없이 확인.
+
+2. 예상 아키텍처 
+    - Signaling (Handshake)
+        - FastAPI를 통해 Session Description Protocol과 ICE Candidate를 교환하여 P2P연결을 도와주는 역할
+    - Media Transport
+        - 클라이언트 서버간 UDP 기반의 Secure Real-Time Transport Protocol로 영상 데이터를 전달
+    - Frame Processing
+        - 수신된 비디오 트랙의 각 프레임을 Intercept하여, Yolo 혹은 다른 모델로 추론을 수행
