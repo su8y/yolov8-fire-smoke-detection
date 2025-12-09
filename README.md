@@ -37,7 +37,7 @@
 터미널에서 `broker` 디렉토리로 이동하여 Docker Compose를 실행합니다.
 
 ```bash
-cd broker
+cd separate-inference/broker
 docker-compose up -d
 ```
 
@@ -47,7 +47,7 @@ docker-compose up -d
 `preprocessor`는 Gradle을 사용하여 빌드하고 실행할 수 있습니다.
 
 ```bash
-cd preprocessor
+cd separate-inference/preprocessor
 ./gradlew bootRun
 ```
 
@@ -59,7 +59,7 @@ cd preprocessor
 
 ```bash
 # consumer/ 디렉토리로 이동
-cd consumer
+cd separate-inference/consumer
 
 # 가상환경 생성 및 활성화 (권장)
 python -m venv venv
@@ -96,7 +96,7 @@ curl -X POST -F "file=@/path/to/your/image.jpg" http://localhost:8000/api/images
 
 ```bash
 # app/ 디렉토리로 이동
-cd app
+cd monolithic-inference/app
 
 # 가상환경 생성 및 활성화 (권장)
 python -m venv venv
@@ -182,7 +182,7 @@ TPS: 38.3 messages/sec
     - Real-time Inference: CCTV/Webcam 비디오 스트림에 대해 500ms 미만의 지연시간으로 화재/연기를 탐지.
     - Interactive Streaming: 탐지된 Bounding Box가 그려진 영상을 클라이언트(브라우저)에서 별도의 플러그인 없이 확인.
 
-2. 예상 아키텍처 
+2. 예상 아키텍처
     - Signaling (Handshake)
         - FastAPI를 통해 Session Description Protocol과 ICE Candidate를 교환하여 P2P연결을 도와주는 역할
     - Media Transport
